@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import { View, Text, Button, StyleSheet, Alert } from "react-native";
+import { View, Text, Button, StyleSheet } from "react-native";
 import { Audio } from "expo-av";
 import { ProgressBar } from "react-native-paper";
 
@@ -9,57 +9,42 @@ export default function App() {
   const [isTurnedOff, setIsTurnedOff] = useState(false);
   const MAX_PROGRESS = 1;
   const BLOW_THRESHOLD = -30;
-  const PROGRESS_INCREMENT = 0.1;
+  const PROGRESS_INCREMENT = 0.01;
   const backgroundSoundRef = useRef(null);
-  const isMounted = useRef(true);
 
   useEffect(() => {
     return () => {
-      isMounted.current = false;
-      stopAllAudio();
+      if (recording) {
+        recording.stopAndUnloadAsync();
+      }
+      if (backgroundSoundRef.current) {
+        backgroundSoundRef.current.stopAsync();
+        backgroundSoundRef.current.unloadAsync();
+      }
     };
-  }, []);
-
-  const stopAllAudio = async () => {
-    if (recording) {
-      await recording.stopAndUnloadAsync();
-      setRecording(null);
-    }
-    if (backgroundSoundRef.current) {
-      await backgroundSoundRef.current.stopAsync();
-      await backgroundSoundRef.current.unloadAsync();
-      backgroundSoundRef.current = null;
-    }
-  };
+  }, [recording]);
 
   const startRecording = async () => {
     try {
-      const { status } = await Audio.requestPermissionsAsync();
-      if (status !== "granted") {
-        Alert.alert("Permission required", "Microphone access is needed to use this feature");
-        return;
-      }
-
-      await stopAllAudio();
-
+      // Set audio mode first
       await Audio.setAudioModeAsync({
         allowsRecordingIOS: true,
         playsInSilentModeIOS: true,
         staysActiveInBackground: true,
         shouldDuckAndroid: true,
         playThroughEarpieceAndroid: false,
+        interruptionModeANDROID: Audio.INTERRUPTION_MODE_IOS_MIX_WITH_OTHERS,
+        interruptionModeIOS: Audio.INTERRUPTION_MODE_IOS_MIX_WITH_OTHERS,
       });
 
+      // Start background music
       const { sound } = await Audio.Sound.createAsync(
-        require("./assets/music.mp3"),
-        {
-          shouldPlay: true,
-          isLooping: true,
-          volume: 0.7,
-        }
+        require('./assets/music.mp3'),
+        { shouldPlay: true, isLooping: true }
       );
       backgroundSoundRef.current = sound;
 
+      // Start recording
       const recordingObject = new Audio.Recording();
       await recordingObject.prepareToRecordAsync({
         isMeteringEnabled: true,
@@ -80,22 +65,18 @@ export default function App() {
           bitRate: 128000,
         },
       });
-
+      
       await recordingObject.startAsync();
       setRecording(recordingObject);
       monitorAudio(recordingObject);
+
     } catch (err) {
       console.error("Failed to start recording", err);
-      Alert.alert("Error", "Failed to start recording. Please check permissions.");
     }
   };
 
   const monitorAudio = (recording) => {
     const interval = setInterval(async () => {
-      if (!isMounted.current) {
-        clearInterval(interval);
-        return;
-      }
       try {
         const status = await recording.getStatusAsync();
         if (status.isRecording && status.metering !== undefined) {
@@ -105,7 +86,12 @@ export default function App() {
               if (newProgress >= MAX_PROGRESS) {
                 setIsTurnedOff(true);
                 clearInterval(interval);
-                stopAllAudio();
+                recording.stopAndUnloadAsync();
+                setRecording(null);
+                if (backgroundSoundRef.current) {
+                  backgroundSoundRef.current.stopAsync();
+                  backgroundSoundRef.current.unloadAsync();
+                }
               }
               return newProgress;
             });

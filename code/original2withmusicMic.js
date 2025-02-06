@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import { View, Text, Button, StyleSheet, Alert } from "react-native";
+import { View, Text, Button, StyleSheet } from "react-native";
 import { Audio } from "expo-av";
 import { ProgressBar } from "react-native-paper";
 
@@ -34,32 +34,32 @@ export default function App() {
 
   const startRecording = async () => {
     try {
-      const { status } = await Audio.requestPermissionsAsync();
-      if (status !== "granted") {
-        Alert.alert("Permission required", "Microphone access is needed to use this feature");
-        return;
-      }
-
+      // Stop any existing audio first
       await stopAllAudio();
 
+      // Configure audio mode for simultaneous playback and recording
       await Audio.setAudioModeAsync({
         allowsRecordingIOS: true,
         playsInSilentModeIOS: true,
         staysActiveInBackground: true,
         shouldDuckAndroid: true,
         playThroughEarpieceAndroid: false,
+        //interruptionModeIOS: Audio.INTERRUPTION_MODE_IOS_MIX_WITH_OTHERS,
+        //interruptionModeAndroid: Audio.INTERRUPTION_MODE_ANDROID_DUCK_OTHERS,
       });
 
+      // Start background music
       const { sound } = await Audio.Sound.createAsync(
-        require("./assets/music.mp3"),
+        require('./assets/music.mp3'),
         {
           shouldPlay: true,
           isLooping: true,
-          volume: 0.7,
+          volume: 0.7, // Reduced volume for better blow detection
         }
       );
       backgroundSoundRef.current = sound;
 
+      // Start recording
       const recordingObject = new Audio.Recording();
       await recordingObject.prepareToRecordAsync({
         isMeteringEnabled: true,
@@ -84,9 +84,9 @@ export default function App() {
       await recordingObject.startAsync();
       setRecording(recordingObject);
       monitorAudio(recordingObject);
+
     } catch (err) {
       console.error("Failed to start recording", err);
-      Alert.alert("Error", "Failed to start recording. Please check permissions.");
     }
   };
 
@@ -96,6 +96,7 @@ export default function App() {
         clearInterval(interval);
         return;
       }
+
       try {
         const status = await recording.getStatusAsync();
         if (status.isRecording && status.metering !== undefined) {

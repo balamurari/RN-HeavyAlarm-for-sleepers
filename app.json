@@ -13,16 +13,26 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "microphonePermission": "Allow $(PRODUCT_NAME) to access your microphone"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
-      }
+        "backgroundColor": "#ffffff",
+        "permissions": [
+          "RECORD_AUDIO"
+        ]
+      },
+      "package": "com.balamurari.alarm"
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "78f57e08-e4b5-4018-bcf7-82b9ca95f3ad"
+      }
     }
   }
 }
