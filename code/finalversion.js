@@ -9,7 +9,7 @@ export default function App() {
   const [isTurnedOff, setIsTurnedOff] = useState(false);
   const MAX_PROGRESS = 1;
   const BLOW_THRESHOLD = -30;
-  const PROGRESS_INCREMENT = 0.1;
+  const PROGRESS_INCREMENT = 0.01;
   const backgroundSoundRef = useRef(null);
   const isMounted = useRef(true);
 
